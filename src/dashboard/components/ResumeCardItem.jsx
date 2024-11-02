@@ -69,10 +69,10 @@ function ResumeCardItem({resume,refreshData}) {
          style={{
           background:resume?.themeColor
         }}>
-          <h2 className='text-sm'>{resume.title}</h2>
+          <h2 className='text-sm' style={{ color: 'black' }}>{resume.title}</h2>
          
           <DropdownMenu>
-          <DropdownMenuTrigger>
+          <DropdownMenuTrigger style={{color: 'black', background: 'none'}}>
           <MoreVertical className='h-4 w-4 cursor-pointer'/>
           </DropdownMenuTrigger>
           <DropdownMenuContent>
