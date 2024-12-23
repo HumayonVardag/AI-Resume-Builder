@@ -3,26 +3,98 @@ import { DataGrid } from "@mui/x-data-grid";
 import SideDrawer from "./SideDrawer";
 import {
   Box,
-  Divider,
-  Drawer,
-  Grid2,
-  ListItem,
-  ListItemButton,
-  ListItemIcon,
-  ListItemText,
+  Container,
+  Paper,
+  Typography,
+  useTheme,
+  useMediaQuery,
+  Chip
 } from "@mui/material";
-import { Toolbar } from "react-simple-wysiwyg";
-import { InboxIcon, List, MailIcon } from "lucide-react";
-
-// 1. Users Table - Name - Last Name - email - Subsciption plan - Status
 
 const columns = [
   { field: "index", headerName: "Index", width: 70 },
   { field: "firstName", headerName: "First name", width: 130 },
   { field: "lastName", headerName: "Last name", width: 130 },
-  { field: "subscriptionPlan", headerName: "Subsciption Plan", width: 130 },
-  { field: "status", headerName: "Status", width: 130 },
+  { 
+    field: "subscriptionPlan", 
+    headerName: "Subscription Plan", 
+    width: 150,
+    renderCell: (params) => {
+      const colors = {
+        paid: {
+          bg: 'rgba(46, 125, 50, 0.1)',
+          text: '#2E7D32',
+          border: 'rgba(46, 125, 50, 0.2)'
+        },
+        free: {
+          bg: 'rgba(198, 40, 40, 0.1)',
+          text: '#C62828',
+          border: 'rgba(198, 40, 40, 0.2)'
+        }
+      };
+      const style = colors[params.value] || colors.free;
+      
+      return (
+        <Box>
+        <Chip sx={{
+          backgroundColor: style.text,
+          color: style.black,
+          border: `1px solid ${style.border}`,
+          fontSize: '0.875rem',
+          fontWeight: 200,
+          textTransform: 'capitalize',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px',
+          marginTop: '5px'
+        }}
+        label={params.value}
+        />
+        </Box>
+      );
+    }
+  },
+  { 
+    field: "status", 
+    headerName: "Status", 
+    width: 130,
+    renderCell: (params) => {
+      const colors = {
+        active: {
+          bg: 'rgba(21, 101, 192, 0.1)',
+          text: '#1565C0',
+          border: 'rgba(21, 101, 192, 0.2)'
+        },
+        inactive: {
+          bg: 'rgba(198, 40, 40, 0.1)',
+          text: '#C62828',
+          border: 'rgba(198, 40, 40, 0.2)'
+        }
+      };
+      const style = colors[params.value] || colors.inactive;
+
+      return (
+        <Box>
+          <Chip sx={{
+            backgroundColor: style.text,
+            color: style.black,
+            border: `1px solid ${style.border}`,
+            fontSize: '0.875rem',
+            fontWeight: 200,
+            textTransform: 'capitalize',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            marginTop: '5px'
+          }}
+          label={params.value}
+          />
+        </Box>
+      );
+    }
+  },
 ];
+
 
 const rows = [
   {
@@ -99,28 +171,80 @@ const rows = [
   },
 ];
 
-const paginationModel = { page: 0, pageSize: 5 };
-
 function DataTable() {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+
   return (
-    <DataGrid
-      rows={rows}
-      columns={columns}
-      initialState={{ pagination: { paginationModel } }}
-      pageSizeOptions={[5, 10]}
-      sx={{ width: '100%' }}
-    />
+    <Paper 
+      elevation={2} 
+      sx={{ 
+        height: 400, 
+        width: '100%', 
+        p: { xs: 1, sm: 2 },
+        borderRadius: 2,
+        overflow: 'hidden'
+      }}
+    >
+      <DataGrid
+        rows={rows}
+        columns={columns}
+        initialState={{
+          pagination: { paginationModel: { page: 0, pageSize: 5 } }
+        }}
+        pageSizeOptions={[5, 10]}
+        sx={{
+          border: 'none',
+          '& .MuiDataGrid-cell': {
+            borderBottom: `1px solid ${theme.palette.divider}`,
+          },
+          '& .MuiDataGrid-columnHeaders': {
+            backgroundColor: theme.palette.grey[50],
+            borderBottom: `2px solid ${theme.palette.divider}`,
+          },
+          '& .MuiDataGrid-row:hover': {
+            backgroundColor: theme.palette.action.hover,
+          },
+          '& .MuiDataGrid-cell:focus': {
+            outline: 'none',
+          },
+          '& .MuiDataGrid-columnHeader:focus': {
+            outline: 'none',
+          }
+        }}
+        density={isMobile ? "compact" : "standard"}
+      />
+    </Paper>
   );
 }
 
 const AdminDashboard = () => {
+  const theme = useTheme();
+  
   return (
-    <Grid2 container size={12} gap={6} display={"flex"}>
-        <SideDrawer />
-        <Grid2 size={{lg: 8, sm: 8}}>
-          <DataTable />
-        </Grid2>
-    </Grid2>
+    <Box
+      component="main"
+      sx={{
+        flexGrow: 1,
+        p: { xs: 2, sm: 3 },
+        backgroundColor: theme.palette.grey[100],
+        minHeight: '100vh',
+      }}
+    >
+      <Container maxWidth="xl">
+        <Typography 
+          variant="h4" 
+          sx={{ 
+            mb: 4, 
+            mt: 2,
+            fontSize: { xs: '1.5rem', sm: '2rem' }
+          }}
+        >
+          Users Dashboard
+        </Typography>
+        <DataTable />
+      </Container>
+    </Box>
   );
 };
 

@@ -10,6 +10,18 @@ const axiosClient = axios.create({
   },
 });
 
+const getUsersOnAdmin = () => axiosClient.get('/admin-users')
+const getAdminPlans = () => axiosClient.get("/admin-plans");
+const createNewPlan = (data) => axiosClient.post("/admin-plans", data)
+
+const getPlans = () => {
+  return axiosClient.get('/admin-plans');
+};
+
+const createCheckoutSession = (data) => {
+  return axiosClient.post('/subscriptions', data);
+};
+
 const CreateNewResume = (data) => axiosClient.post("/user-resumes", data);
 
 const GetUserResumes = (userEmail) =>
@@ -23,10 +35,23 @@ const GetResumeById = (id) =>
 
 const DeleteResumeById = (id) => axiosClient.delete("/user-resumes/" + id);
 
-export default {
+const checkActiveSubscription = () => axiosClient.get('/subsciptions/check-active');
+const createSubscription = (data) => axiosClient.post('/subsciptions', data);
+const cancelSubscription = (subscriptionId) => axiosClient.post(`/subsciptions/${subscriptionId}/cancel`);
+
+const GlobalApi = {
   CreateNewResume,
   GetUserResumes,
   UpdateResumeDetail,
   GetResumeById,
   DeleteResumeById,
+  getAdminPlans,
+  createNewPlan,
+  getPlans,
+  createCheckoutSession,
+  checkActiveSubscription,
+  createSubscription,
+  cancelSubscription
 };
+
+export default GlobalApi;
