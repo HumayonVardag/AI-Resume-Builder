@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Container,
   Grid,
@@ -10,8 +10,14 @@ import {
   Box,
   CircularProgress,
   Chip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Alert,
+  AlertTitle,
 } from '@mui/material';
-import { Check, Loader2 } from 'lucide-react';
+import { Check, Loader2, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import GlobalApi from '../../../service/GlobalApi';
 import { useUser } from "@clerk/clerk-react";
@@ -22,28 +28,30 @@ const PurchasePlans = () => {
   const [loading, setLoading] = useState(true);
   const [processingPayment, setProcessingPayment] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState(null);
-  const [hasActiveSubscription, setHasActiveSubscription] = useState(false);
+  const [activeSubscription, setActiveSubscription] = useState(null);
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
 
-  useEffect(() => {
-    fetchPlans();
-    checkActiveSubscription();
-  }, []);
+  const checkActiveSubscription = useCallback(async () => {
+    if(!user) return;
 
-  const checkActiveSubscription = async () => {
     try {
-      const response = await GlobalApi.checkActiveSubscription({
-        data: {
-          userEmail: user.primaryEmailAddress.emailAddress
-        }
+      const response = await GlobalApi.checkActiveSubscription({        
+        userEmail: user.primaryEmailAddress.emailAddress
       });
-      setHasActiveSubscription(response.data.hasActiveSubscription);
       if (response.data.hasActiveSubscription) {
-        toast.info("You already have an active subscription!");
-      }
+        setActiveSubscription(response.data.subscription);
+      } else setActiveSubscription(null)
     } catch (error) {
       console.error('Error checking subscription:', error);
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    if(user) {
+      fetchPlans();   
+      checkActiveSubscription();
+    }
+  }, [user, checkActiveSubscription]);
 
   const fetchPlans = async () => {
     try {
@@ -59,8 +67,8 @@ const PurchasePlans = () => {
 
   const handlePurchase = async (planId) => {
     try {
-      if (hasActiveSubscription) {
-        toast.error("You already have an active subscription!");
+      if (activeSubscription) {
+        toast.error("Please cancel your current subscription first");
         return;
       }
 
@@ -74,7 +82,6 @@ const PurchasePlans = () => {
         }
       });
       
-      // Redirect to Stripe checkout
       if (response.data.checkoutUrl) {
         window.location.href = response.data.checkoutUrl;
       } else {
@@ -86,6 +93,18 @@ const PurchasePlans = () => {
     } finally {
       setProcessingPayment(false);
       setSelectedPlan(null);
+    }
+  };
+
+  const handleCancelSubscription = async () => {
+    try {
+      await GlobalApi.cancelSubscription(activeSubscription.id);
+      toast.success('Subscription cancelled successfully');
+      setShowCancelDialog(false);
+      checkActiveSubscription(); // Refresh subscription status
+    } catch (error) {
+      console.error('Error cancelling subscription:', error);
+      toast.error('Failed to cancel subscription');
     }
   };
 
@@ -105,19 +124,54 @@ const PurchasePlans = () => {
   return (
     <Container maxWidth="lg" sx={{ py: 8 }}>
       <Typography variant="h4" align="center" gutterBottom>
-        Choose Your Plan
-      </Typography>
-      <Typography variant="body1" align="center" color="text.secondary" sx={{ mb: 6 }}>
-        Select the perfect plan for your needs
+        Subscription Plans
       </Typography>
 
-      {hasActiveSubscription && (
-        <Box sx={{ mb: 4, p: 2, bgcolor: 'info.light', borderRadius: 2 }}>
-          <Typography align="center" color="info.dark">
-            You currently have an active subscription. You can manage your subscription from your account settings.
-          </Typography>
+      {/* Active Subscription Card */}
+      {activeSubscription && (
+        <Box sx={{ mb: 6 }}>
+          <Card sx={{ 
+            backgroundColor: (theme) => theme.palette.primary.light,
+            color: (theme) => theme.palette.primary.contrastText,
+          }}>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                Active Subscription
+              </Typography>
+              <Grid container spacing={2}>
+                <Grid item xs={12} md={4}>
+                  <Typography variant="body1">
+                    Plan: {activeSubscription.metadata?.plan_name}
+                  </Typography>
+                </Grid>
+                <Grid item xs={12} md={4}>
+                  <Typography variant="body1">
+                    Amount: ${activeSubscription.amount}
+                  </Typography>
+                </Grid>
+                <Grid item xs={12} md={4}>
+                  <Typography variant="body1">
+                    Valid until: {new Date(activeSubscription.end_date).toLocaleDateString()}
+                  </Typography>
+                </Grid>
+              </Grid>
+              <Box sx={{ mt: 2, display: 'flex', gap: 2 }}>
+                <Button 
+                  variant="contained" 
+                  color="warning"
+                  onClick={() => setShowCancelDialog(true)}
+                >
+                  Cancel Subscription
+                </Button>
+              </Box>
+            </CardContent>
+          </Card>
         </Box>
       )}
+
+      <Typography variant="body1" align="center" color="text.secondary" sx={{ mb: 6 }}>
+        {activeSubscription ? 'Available Plans for Upgrade' : 'Select the perfect plan for your needs'}
+      </Typography>
 
       <Grid container spacing={4} justifyContent="center">
         {plans.map((plan) => (
@@ -132,8 +186,8 @@ const PurchasePlans = () => {
                 '&:hover': {
                   transform: 'translateY(-4px)',
                 },
-                ...(selectedPlan === plan.id && {
-                  border: (theme) => `2px solid ${theme.palette.primary.main}`,
+                ...(activeSubscription?.admin_plan === plan.id && {
+                  border: (theme) => `2px solid ${theme.palette.success.main}`,
                 }),
               }}
             >
@@ -145,6 +199,17 @@ const PurchasePlans = () => {
                     position: 'absolute',
                     top: 16,
                     right: 16,
+                  }}
+                />
+              )}
+              {activeSubscription?.admin_plan === plan.id && (
+                <Chip
+                  label="Current Plan"
+                  color="success"
+                  sx={{
+                    position: 'absolute',
+                    top: 16,
+                    left: 16,
                   }}
                 />
               )}
@@ -178,7 +243,7 @@ const PurchasePlans = () => {
                   variant="contained"
                   size="large"
                   onClick={() => handlePurchase(plan.id)}
-                  disabled={processingPayment || hasActiveSubscription}
+                  disabled={processingPayment || (activeSubscription?.admin_plan === plan.id)}
                   sx={{
                     py: 1.5,
                     position: 'relative',
@@ -186,10 +251,10 @@ const PurchasePlans = () => {
                 >
                   {processingPayment && selectedPlan === plan.id ? (
                     <Loader2 className="animate-spin" size={24} />
-                  ) : hasActiveSubscription ? (
-                    'Already Subscribed'
+                  ) : activeSubscription?.admin_plan === plan.id ? (
+                    'Current Plan'
                   ) : (
-                    'Purchase Plan'
+                    activeSubscription ? 'Switch to this Plan' : 'Purchase Plan'
                   )}
                 </Button>
               </CardActions>
@@ -197,6 +262,33 @@ const PurchasePlans = () => {
           </Grid>
         ))}
       </Grid>
+
+      {/* Cancel Subscription Dialog */}
+      <Dialog open={showCancelDialog} onClose={() => setShowCancelDialog(false)}>
+        <DialogTitle>Cancel Subscription</DialogTitle>
+        <DialogContent>
+          <Alert severity="warning" sx={{ mt: 2 }}>
+            <AlertTitle>Warning</AlertTitle>
+            Are you sure you want to cancel your subscription? This action cannot be undone.
+          </Alert>
+          <Typography variant="body1" sx={{ mt: 2 }}>
+            Your subscription will remain active until the end of your current billing period.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowCancelDialog(false)}>
+            Keep Subscription
+          </Button>
+          <Button 
+            onClick={handleCancelSubscription} 
+            color="error" 
+            variant="contained"
+            startIcon={<AlertTriangle size={16} />}
+          >
+            Cancel Subscription
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Container>
   );
 };

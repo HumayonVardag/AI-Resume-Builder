@@ -2,17 +2,20 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { CheckCircle, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import axios from 'axios';
+import GlobalApi from '../../service/GlobalApi'
+import { useUser } from '@clerk/clerk-react';
 
 const PaymentSuccess = () => {
+  const user = useUser()
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  console.log('------- searchParams ----- ', searchParams)
   const [verifying, setVerifying] = useState(true);
 
   useEffect(() => {
     const verifyPayment = async () => {
       try {
-        const sessionId = searchParams.get('session_id');
+        const sessionId = searchParams.get('sessionId');
         if (!sessionId) {
           toast.error('Invalid session');
           navigate('/dashboard');
@@ -20,8 +23,8 @@ const PaymentSuccess = () => {
         }
 
         // Verify the payment with your Strapi backend
-        const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/orders/success`, {
-          params: { session_id: sessionId }
+        const response = await GlobalApi.confirmPayment({
+          params: { sessionId: sessionId, userEmail: user?.primaryEmailAddress.emailAddress }
         });
 
         if (response.data.success) {

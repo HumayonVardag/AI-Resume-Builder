@@ -19,7 +19,7 @@ const getPlans = () => {
 };
 
 const createCheckoutSession = (data) => {
-  return axiosClient.post('/subscriptions', data);
+  return axiosClient.post('/subsciptions', data);
 };
 
 const CreateNewResume = (data) => axiosClient.post("/user-resumes", data);
@@ -35,9 +35,10 @@ const GetResumeById = (id) =>
 
 const DeleteResumeById = (id) => axiosClient.delete("/user-resumes/" + id);
 
-const checkActiveSubscription = () => axiosClient.get('/subsciptions/check-active');
+const checkActiveSubscription = (data) => axiosClient.get(`/subsciptions/is-subscription-active?userEmail=${data.userEmail}`);
 const createSubscription = (data) => axiosClient.post('/subsciptions', data);
 const cancelSubscription = (subscriptionId) => axiosClient.post(`/subsciptions/${subscriptionId}/cancel`);
+const confirmPayment = (data) => axiosClient.get('/subsciptions/webhook', data)
 
 const GlobalApi = {
   CreateNewResume,
@@ -51,7 +52,8 @@ const GlobalApi = {
   createCheckoutSession,
   checkActiveSubscription,
   createSubscription,
-  cancelSubscription
+  cancelSubscription,
+  confirmPayment
 };
 
 export default GlobalApi;
